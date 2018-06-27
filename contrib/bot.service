@@ -1,0 +1,12 @@
+[Unit]
+Description=Silence Bot
+After=syslog.target
+
+[Service]
+LimitNOFILE=1048576
+ExecStart=/srv/silence -t 123456789:XXXxXxxXxxx0xxxXX00XXXX0XXxXXxxXxxx
+WorkingDirectory=/tmp
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,24 +1,32 @@
 package main
 
-import "time"
 import (
-	"flag"
-	"fmt"
-	"github.com/go-redis/redis"
-	tb "gopkg.in/tucnak/telebot.v2"
-	"log"
+	"os"
 	"strconv"
+	"time"
+
+	alog "github.com/apex/log"
+	"github.com/apex/log/handlers/cli"
+
+	"github.com/go-redis/redis"
+	"github.com/spf13/pflag"
+	tb "gopkg.in/tucnak/telebot.v2"
 )
 
 var b *tb.Bot
 var db *redis.Client
 
+var log = &alog.Logger{
+	Level:   alog.DebugLevel,
+	Handler: cli.New(os.Stderr),
+}
+
 func main() {
-	redisHost := flag.String("rhost", "localhost:6379", "redis host and port")
-	redisPwd := flag.String("rpwd", "", "redis password")
-	redisDb := flag.Int("rdb", 0, "redis DB number")
-	tgToken := flag.String("token", "", "telegram bot token")
-	flag.Parse()
+	redisHost := pflag.StringP("rhost", "h", "localhost:6379", "redis host and port")
+	redisPwd := pflag.StringP("rpwd", "p", "", "redis password")
+	redisDb := pflag.IntP("rdb", "n", 0, "redis DB number (default 0)")
+	tgToken := pflag.StringP("token", "t", "", "telegram bot token (required)")
+	pflag.Parse()
 
 	if *tgToken == "" {
 		log.Fatal("telegram bot token required")
@@ -30,8 +38,8 @@ func main() {
 		DB:       *redisDb,
 	})
 
-	if db.DbSize().Err() != nil {
-		log.Fatal("redis error")
+	if err := db.DbSize().Err(); err != nil {
+		log.WithError(err).Fatal("redis error")
 	}
 
 	poller := tb.NewMiddlewarePoller(&tb.LongPoller{Timeout: 10 * time.Second}, func(upd *tb.Update) bool {
@@ -48,8 +56,7 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatal(err)
-		return
+		log.WithError(err).Fatal("can't init bot instance")
 	}
 
 	b.Handle("/silence", silenceCommand)
@@ -82,24 +89,28 @@ func checkMessage(m *tb.Message) {
 
 func silenceCommand(m *tb.Message) {
 	if !isAdmin(m.Chat, m.Sender) {
+		log.Debug("unauthorized message, removing")
 		b.Delete(m)
 		return
 	}
 	if !isAdmin(m.Chat, b.Me) {
-		b.Reply(m, "Я не админ :(")
+		log.Debug("bot is unauthorized")
+		b.Reply(m, "I'm not an admin :(")
 		db.Del(getAdminsKey(m.Chat))
 		return
 	}
 
 	if isSilent(m.Chat) {
 		setSilent(m.Chat, false)
+		log.WithField("chatID", m.Chat.ID).Debug("disabling silent mode")
 		go unrestrictAll(m.Chat)
-		b.Send(m.Chat, "*Режим тишины отключен. Можете общаться дальше.*", &tb.SendOptions{
+		b.Send(m.Chat, "*Silence mode disabled. Make flood great again.*", &tb.SendOptions{
 			ParseMode: tb.ModeMarkdown,
 		})
 	} else {
 		setSilent(m.Chat, true)
-		b.Send(m.Chat, "*В чате активирован режим тишины!*", &tb.SendOptions{
+		log.WithField("chatID", m.Chat.ID).Debug("enabled silent mode")
+		b.Send(m.Chat, "*Silence mode enabled. Tshhh!*", &tb.SendOptions{
 			ParseMode: tb.ModeMarkdown,
 		})
 	}
@@ -161,16 +172,4 @@ func unrestrictAll(chat *tb.Chat) {
 		b.Promote(chat, member)
 		time.Sleep(100 * time.Millisecond)
 	}
-}
-
-func getAdminsKey(chat *tb.Chat) string {
-	return fmt.Sprintf("admins.%d", chat.ID)
-}
-
-func getSilentKey(chat *tb.Chat) string {
-	return fmt.Sprintf("silent.%d", chat.ID)
-}
-
-func getRestrictedKey(chat *tb.Chat) string {
-	return fmt.Sprintf("restricted.%d", chat.ID)
 }

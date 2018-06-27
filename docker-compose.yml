@@ -1,0 +1,19 @@
+version: '3.3'
+
+services:
+  redis:
+    image: "redis:alpine"
+    restart: always
+  silencebot:
+    build: .
+    restart: always
+    ports:
+      - target: 80
+        published: 9190
+        protocol: tcp
+        mode: host
+    environment:
+      DB_ADDR: 'redis:6379'
+    links:
+      - redis
+

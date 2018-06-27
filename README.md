@@ -27,10 +27,23 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo -ldflags '-w -extl
 Please note that the bot requires running Redis instance to store data.
 
 ## Running
-Use `./silencebot -token <YOUR_TELEGRAM_TOKEN>` to start the bot.
+Use `./silencebot -t <YOUR_TELEGRAM_TOKEN>` to start the bot.
 
 By default it connects to localhost:6379 Redis instance without password and selects db 0.
 You can customize this behavior, check `./silencebot -h` for all arguments.
 
 ## Running as a background service
-It's up to you how you achieve that. I'm too lazy to make up any dockerfiles/etc :>
+It's up to you how you achieve that. ~~I'm too lazy to make up any dockerfiles/etc :>~~
+
+**Don't forget to replace token!**
+
+Docker compose is ready to use, but not recommended for stable environments as long as redis is running inside Docker.
+
+[systemd service example](contrib/bot.service) (recommended)
+
+## TODO
+
+- [ ] Localization
+- [ ] Embedded service autoinstall
+- [ ] Prometheus metrics & grafana dashboard
+- [ ] Minimal hidden admin commands (`/stats`, `/health`, `/uptime` etc.)
