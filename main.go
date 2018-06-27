@@ -89,12 +89,11 @@ func checkMessage(m *tb.Message) {
 
 func silenceCommand(m *tb.Message) {
 	if !isAdmin(m.Chat, m.Sender) {
-		log.Debug("unauthorized message, removing")
 		b.Delete(m)
 		return
 	}
 	if !isAdmin(m.Chat, b.Me) {
-		log.Debug("bot is unauthorized")
+		log.WithField("chatID", m.Chat.ID).Debug("bot has no admin rights")
 		b.Reply(m, "I'm not an admin :(")
 		db.Del(getAdminsKey(m.Chat))
 		return

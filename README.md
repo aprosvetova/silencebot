@@ -17,12 +17,11 @@ I'm very new to Go, so I'll be happy if you make some pull requests.
 ## Building
 Install dependencies
 ```
-go get -u gopkg.in/tucnak/telebot.v2
-go get -u github.com/go-redis/redis
+go get ./...
 ```
 And then build
 ```
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo -ldflags '-w -extldflags "-static"' -o silencebot
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo -ldflags '-s -w -extldflags "-static"' -o silencebot
 ```
 Please note that the bot requires running Redis instance to store data.
 
@@ -33,7 +32,8 @@ By default it connects to localhost:6379 Redis instance without password and sel
 You can customize this behavior, check `./silencebot -h` for all arguments.
 
 ## Running as a background service
-It's up to you how you achieve that. ~~I'm too lazy to make up any dockerfiles/etc :>~~
+
+There are two ways as for now: Docker compose and systemd service
 
 **Don't forget to replace token!**
 
@@ -45,5 +45,5 @@ Docker compose is ready to use, but not recommended for stable environments as l
 
 - [ ] Localization
 - [ ] Embedded service autoinstall
-- [ ] Prometheus metrics & grafana dashboard
+- [ ] Pin "silence mod enabled" message and restore previous pin then
 - [ ] Minimal hidden admin commands (`/stats`, `/health`, `/uptime` etc.)
