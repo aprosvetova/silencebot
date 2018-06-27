@@ -12,9 +12,17 @@ All non-admin messages will be deleted in silent mode, any user who tries to sen
 
 All users will be unrestricted automatically and be able to chat.
 
+**Please note that the bot requires running Redis instance to store data.**
+
 I'm very new to Go, so I'll be happy if you make some pull requests.
 
-## Building
+## Building for all platforms
+Make sure you have Go installed and just run
+```
+./build.sh
+```
+
+## Building manually
 Install dependencies
 ```
 go get ./...
@@ -23,7 +31,6 @@ And then build
 ```
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo -ldflags '-s -w -extldflags "-static"' -o silencebot
 ```
-Please note that the bot requires running Redis instance to store data.
 
 ## Running
 Use `./silencebot -t <YOUR_TELEGRAM_TOKEN>` to start the bot.
