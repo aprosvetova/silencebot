@@ -37,7 +37,3 @@ func getLang(chat *tb.Chat) string {
 func setLang(chat *tb.Chat, lang string) {
 	db.Set(getLangKey(chat), lang, 0)
 }
-
-func detectLang(chat *tb.Chat, locale string) {
-
-}
