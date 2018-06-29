@@ -17,3 +17,27 @@ func getSilentKey(chat *tb.Chat) string {
 func getRestrictedKey(chat *tb.Chat) string {
 	return fmt.Sprintf("restricted.%d", chat.ID)
 }
+
+func getPinnedMessageKey(chat *tb.Chat) string {
+	return fmt.Sprintf("pinned.%d", chat.ID)
+}
+
+func getLangKey(chat *tb.Chat) string {
+	return fmt.Sprintf("lang.%d", chat.ID)
+}
+
+func getLang(chat *tb.Chat) string {
+	lang := db.Get(getLangKey(chat)).Val()
+	if lang == "" {
+		return "en-US"
+	}
+	return lang
+}
+
+func setLang(chat *tb.Chat, lang string) {
+	db.Set(getLangKey(chat), lang, 0)
+}
+
+func detectLang(chat *tb.Chat, locale string) {
+
+}

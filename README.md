@@ -3,6 +3,7 @@
 Silence Bot allows you to calm down all chat participants by muting them temporarily.
 
 Just add the bot to your supergroup, give it message deletion and user restriction rights and you're all set.
+If you give it a right to pin messages, the bot will pin "Silence mod enabled" messages.
 
 >**Use /silence to enable silent mode.**
 >
@@ -11,6 +12,8 @@ Just add the bot to your supergroup, give it message deletion and user restricti
 >**Use /silence again to disable silent mode.**
 >
 >All users will be unrestricted automatically and be able to chat.
+
+>**Use /switchlang to switch between Russian and English**
 
 **Please note that the bot requires running Redis instance to store data.**
 
@@ -50,7 +53,5 @@ Docker compose is ready to use, but not recommended for stable environments as l
 
 ## TODO
 
-- [ ] Localization
 - [ ] Embedded service autoinstall
-- [ ] Pin "silence mod enabled" message and restore previous pin then
 - [ ] Minimal hidden admin commands (`/stats`, `/health`, `/uptime` etc.)

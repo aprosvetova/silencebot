@@ -8,9 +8,11 @@ import (
 	alog "github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
 
+	"github.com/Unknwon/i18n"
 	"github.com/go-redis/redis"
 	"github.com/spf13/pflag"
 	tb "gopkg.in/tucnak/telebot.v2"
+	"strings"
 )
 
 var b *tb.Bot
@@ -22,6 +24,9 @@ var log = &alog.Logger{
 }
 
 func main() {
+	i18n.SetMessage("en-US", "locale/en-US.ini")
+	i18n.SetMessage("ru-RU", "locale/ru-RU.ini")
+
 	redisHost := pflag.StringP("rhost", "h", "localhost:6379", "redis host and port")
 	redisPwd := pflag.StringP("rpwd", "p", "", "redis password")
 	redisDb := pflag.IntP("rdb", "n", 0, "redis DB number (default 0)")
@@ -43,7 +48,7 @@ func main() {
 	}
 
 	poller := tb.NewMiddlewarePoller(&tb.LongPoller{Timeout: 10 * time.Second}, func(upd *tb.Update) bool {
-		if upd.Message == nil || upd.Message.Chat.Type != tb.ChatSuperGroup {
+		if upd.Message != nil && upd.Message.Chat.Type != tb.ChatSuperGroup {
 			return false
 		}
 		return true
@@ -60,6 +65,7 @@ func main() {
 	}
 
 	b.Handle("/silence", silenceCommand)
+	b.Handle("/switchlang", switchLangCommand)
 
 	//uh really? why can't I just handle all Message updates?
 	b.Handle(tb.OnText, checkMessage)
@@ -74,7 +80,27 @@ func main() {
 	b.Handle(tb.OnVideoNote, checkMessage)
 	b.Handle(tb.OnVoice, checkMessage)
 
+	b.Handle(tb.OnPinned, savePinnedMessage)
+
+	b.Handle(tb.OnAddedToGroup, showWelcomeMessage)
+
 	b.Start()
+}
+
+func savePinnedMessage(m *tb.Message) {
+	db.Set(getPinnedMessageKey(m.PinnedMessage.Chat), m.PinnedMessage.ID, 0)
+}
+
+func restorePinnedMessage(c *tb.Chat) {
+	msgID, err := db.Get(getPinnedMessageKey(c)).Int64()
+	if err != nil || msgID == 0 {
+		b.Unpin(c)
+		return
+	}
+	b.Pin(&tb.Message{
+		Chat: c,
+		ID:   int(msgID),
+	}, tb.Silent)
 }
 
 func checkMessage(m *tb.Message) {
@@ -87,6 +113,24 @@ func checkMessage(m *tb.Message) {
 	}
 }
 
+func showWelcomeMessage(m *tb.Message) {
+	b.Send(m.Chat, strings.Replace(i18n.Tr(getLang(m.Chat), "welcome_message"), "\\n", "\n", -1), tb.ModeMarkdown)
+}
+
+func switchLangCommand(m *tb.Message) {
+	if !isAdmin(m.Chat, m.Sender) {
+		b.Delete(m)
+		return
+	}
+	currentLang := getLang(m.Chat)
+	newLang := "ru-RU"
+	if currentLang == "ru-RU" {
+		newLang = "en-US"
+	}
+	setLang(m.Chat, newLang)
+	b.Reply(m, i18n.Tr(newLang, "language_switched"))
+}
+
 func silenceCommand(m *tb.Message) {
 	if !isAdmin(m.Chat, m.Sender) {
 		b.Delete(m)
@@ -94,7 +138,7 @@ func silenceCommand(m *tb.Message) {
 	}
 	if !isAdmin(m.Chat, b.Me) {
 		log.WithField("chatID", m.Chat.ID).Debug("bot has no admin rights")
-		b.Reply(m, "I'm not an admin :(")
+		b.Reply(m, i18n.Tr(getLang(m.Chat), "bot_not_admin"))
 		db.Del(getAdminsKey(m.Chat))
 		return
 	}
@@ -103,15 +147,15 @@ func silenceCommand(m *tb.Message) {
 		setSilent(m.Chat, false)
 		log.WithField("chatID", m.Chat.ID).Debug("disabling silent mode")
 		go unrestrictAll(m.Chat)
-		b.Send(m.Chat, "*Silence mode disabled. Make flood great again.*", &tb.SendOptions{
-			ParseMode: tb.ModeMarkdown,
-		})
+		b.Send(m.Chat, i18n.Tr(getLang(m.Chat), "silence_disabled"), tb.ModeMarkdown)
+		restorePinnedMessage(m.Chat)
 	} else {
 		setSilent(m.Chat, true)
 		log.WithField("chatID", m.Chat.ID).Debug("enabled silent mode")
-		b.Send(m.Chat, "*Silence mode enabled. Tshhh!*", &tb.SendOptions{
-			ParseMode: tb.ModeMarkdown,
-		})
+		msg, err := b.Send(m.Chat, i18n.Tr(getLang(m.Chat), "silence_enabled"), tb.ModeMarkdown)
+		if err == nil {
+			b.Pin(msg, tb.Silent)
+		}
 	}
 }
 
